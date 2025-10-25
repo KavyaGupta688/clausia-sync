@@ -6,11 +6,125 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, Copy, Download, FileText } from "lucide-react";
-import { useState } from "react";
+import { Sparkles, Copy, Download, FileText, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const PolicyGenerator = () => {
   const [generated, setGenerated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [productName, setProductName] = useState("");
+  const [description, setDescription] = useState("");
+  const [thirdParty, setThirdParty] = useState("");
+  const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
+  const [selectedJurisdictions, setSelectedJurisdictions] = useState<string[]>([]);
+  const [generatedContent, setGeneratedContent] = useState("");
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+  }, [navigate]);
+
+  const toggleDataType = (dataType: string) => {
+    setSelectedDataTypes(prev => 
+      prev.includes(dataType) 
+        ? prev.filter(dt => dt !== dataType)
+        : [...prev, dataType]
+    );
+  };
+
+  const toggleJurisdiction = (jurisdiction: string) => {
+    setSelectedJurisdictions(prev =>
+      prev.includes(jurisdiction)
+        ? prev.filter(j => j !== jurisdiction)
+        : [...prev, jurisdiction]
+    );
+  };
+
+  const handleGenerate = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to generate policies",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    if (!productName || selectedDataTypes.length === 0 || selectedJurisdictions.length === 0) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in product name, select data types and jurisdictions",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-policy', {
+        body: {
+          productName,
+          productDescription: description,
+          dataTypes: selectedDataTypes,
+          jurisdictions: selectedJurisdictions,
+          thirdPartyServices: thirdParty,
+        },
+      });
+
+      if (error) throw error;
+
+      setGeneratedContent(data.content);
+      setGenerated(true);
+      
+      toast({
+        title: "Success!",
+        description: "Privacy policy generated successfully",
+      });
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate policy",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedContent);
+    toast({
+      title: "Copied!",
+      description: "Policy copied to clipboard",
+    });
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([generatedContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${productName}-privacy-policy.html`;
+    a.click();
+    toast({
+      title: "Downloaded!",
+      description: "Policy downloaded successfully",
+    });
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -39,6 +153,8 @@ const PolicyGenerator = () => {
                   id="product-name" 
                   placeholder="e.g., MyApp" 
                   className="mt-2"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
                 />
               </div>
               
@@ -48,6 +164,8 @@ const PolicyGenerator = () => {
                   id="description" 
                   placeholder="Describe what your product does and what data it processes..."
                   className="mt-2 min-h-[100px]"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
               
@@ -63,10 +181,14 @@ const PolicyGenerator = () => {
                     "Usage analytics"
                   ].map((item) => (
                     <div key={item} className="flex items-center space-x-2">
-                      <Checkbox id={item} />
+                      <Checkbox 
+                        id={item} 
+                        checked={selectedDataTypes.includes(item)}
+                        onCheckedChange={() => toggleDataType(item)}
+                      />
                       <label
                         htmlFor={item}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                       >
                         {item}
                       </label>
@@ -78,11 +200,15 @@ const PolicyGenerator = () => {
               <div>
                 <Label>Target Jurisdictions</Label>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {["GDPR (EU)", "CCPA (CA)", "DPDP (India)", "LGPD (Brazil)", "PIPEDA (Canada)"].map((jurisdiction) => (
+                  {[
+                    "GDPR", "CCPA", "DPDP", "LGPD", "PIPEDA", 
+                    "PDPA", "APPI", "POPIA"
+                  ].map((jurisdiction) => (
                     <Badge 
                       key={jurisdiction}
-                      variant="outline"
+                      variant={selectedJurisdictions.includes(jurisdiction) ? "default" : "outline"}
                       className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onClick={() => toggleJurisdiction(jurisdiction)}
                     >
                       {jurisdiction}
                     </Badge>
@@ -96,15 +222,27 @@ const PolicyGenerator = () => {
                   id="third-party" 
                   placeholder="e.g., Google Analytics, Stripe, OpenAI"
                   className="mt-2"
+                  value={thirdParty}
+                  onChange={(e) => setThirdParty(e.target.value)}
                 />
               </div>
               
               <Button 
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 gap-2"
-                onClick={() => setGenerated(true)}
+                onClick={handleGenerate}
+                disabled={loading}
               >
-                <Sparkles className="h-4 w-4" />
-                Generate Policy
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Policy
+                  </>
+                )}
               </Button>
             </div>
           </Card>
@@ -115,10 +253,10 @@ const PolicyGenerator = () => {
               <h2 className="text-xl font-semibold">Generated Policy</h2>
               {generated && (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleCopy}>
                     <Copy className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -136,75 +274,10 @@ const PolicyGenerator = () => {
               </div>
             ) : (
               <div className="prose prose-sm max-w-none">
-                <div className="bg-muted/50 rounded-lg p-6 space-y-4 max-h-[600px] overflow-y-auto">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Privacy Policy</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Last Updated: {new Date().toLocaleDateString()}
-                    </p>
-                  </div>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">1. Information We Collect</h4>
-                    <p className="text-sm text-muted-foreground">
-                      We collect information that you provide directly to us, including email addresses, 
-                      location data, and device information. This data is processed in accordance with 
-                      applicable data protection regulations including GDPR, CCPA, and DPDP.
-                    </p>
-                  </section>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">2. How We Use Your Information</h4>
-                    <p className="text-sm text-muted-foreground">
-                      We use the collected information to provide, maintain, and improve our services, 
-                      process transactions, send communications, and ensure security. Your data is never 
-                      sold to third parties.
-                    </p>
-                  </section>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">3. Data Storage and Security</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Your data is stored securely using industry-standard encryption. We implement 
-                      appropriate technical and organizational measures to protect against unauthorized 
-                      access, alteration, or destruction.
-                    </p>
-                  </section>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">4. Third-Party Services</h4>
-                    <p className="text-sm text-muted-foreground">
-                      We integrate with trusted third-party services including Google Analytics for 
-                      usage analytics, Stripe for payment processing, and OpenAI for AI-powered features. 
-                      Each service adheres to strict privacy standards.
-                    </p>
-                  </section>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">5. Your Rights</h4>
-                    <p className="text-sm text-muted-foreground">
-                      You have the right to access, correct, delete, or export your personal data. 
-                      You may also object to processing or withdraw consent at any time. Contact us 
-                      at privacy@example.com to exercise these rights.
-                    </p>
-                  </section>
-                  
-                  <section>
-                    <h4 className="font-semibold mb-2">6. Data Retention</h4>
-                    <p className="text-sm text-muted-foreground">
-                      We retain personal data only for as long as necessary to fulfill the purposes 
-                      outlined in this policy, comply with legal obligations, resolve disputes, and 
-                      enforce agreements.
-                    </p>
-                  </section>
-                  
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      This policy was automatically generated by Clausia AI and tailored to your 
-                      product's specific data practices and applicable jurisdictions.
-                    </p>
-                  </div>
-                </div>
+                <div 
+                  className="bg-muted/50 rounded-lg p-6 space-y-4 max-h-[600px] overflow-y-auto"
+                  dangerouslySetInnerHTML={{ __html: generatedContent }}
+                />
               </div>
             )}
           </Card>

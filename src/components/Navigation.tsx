@@ -1,9 +1,36 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Scale, LayoutDashboard, FileText, Network, Shield } from "lucide-react";
+import { Scale, LayoutDashboard, FileText, Network, Shield, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 const Navigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully.",
+    });
+    navigate("/");
+  };
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -63,12 +90,25 @@ const Navigation = () => {
             </Link>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">Sign In</Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-              Get Started
-            </Button>
-          </div>
+          {user ? (
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Link to="/auth">
+                <Button variant="outline" size="sm">Sign In</Button>
+              </Link>
+              <Link to="/auth">
+                <Button size="sm" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </nav>

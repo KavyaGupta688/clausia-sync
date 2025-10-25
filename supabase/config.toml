@@ -1,1 +1,7 @@
 project_id = "vfbuzkfszjsxkiecnpaa"
+
+[functions.generate-policy]
+verify_jwt = true
+
+[functions.run-compliance-scan]
+verify_jwt = true
