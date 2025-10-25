@@ -14,7 +14,175 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      compliance_mappings: {
+        Row: {
+          compliance_status: string | null
+          created_at: string | null
+          data_flow: Json | null
+          feature_description: string | null
+          feature_name: string
+          id: string
+          linked_clauses: Json | null
+          policy_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          compliance_status?: string | null
+          created_at?: string | null
+          data_flow?: Json | null
+          feature_description?: string | null
+          feature_name: string
+          id?: string
+          linked_clauses?: Json | null
+          policy_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          compliance_status?: string | null
+          created_at?: string | null
+          data_flow?: Json | null
+          feature_description?: string | null
+          feature_name?: string
+          id?: string
+          linked_clauses?: Json | null
+          policy_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_mappings_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_scans: {
+        Row: {
+          completed_at: string | null
+          findings: Json | null
+          id: string
+          policy_id: string | null
+          recommendations: Json | null
+          scan_type: string
+          scanned_at: string | null
+          severity_summary: Json | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          findings?: Json | null
+          id?: string
+          policy_id?: string | null
+          recommendations?: Json | null
+          scan_type: string
+          scanned_at?: string | null
+          severity_summary?: Json | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          findings?: Json | null
+          id?: string
+          policy_id?: string | null
+          recommendations?: Json | null
+          scan_type?: string
+          scanned_at?: string | null
+          severity_summary?: Json | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_scans_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jurisdictions: {
+        Row: {
+          code: string
+          id: string
+          name: string
+          region: string
+          requirements: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          id?: string
+          name: string
+          region: string
+          requirements?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          id?: string
+          name?: string
+          region?: string
+          requirements?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      policies: {
+        Row: {
+          content: string
+          created_at: string | null
+          data_types: Json | null
+          id: string
+          jurisdictions: string[] | null
+          policy_type: string
+          product_description: string | null
+          product_name: string
+          status: string | null
+          third_party_services: string[] | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          data_types?: Json | null
+          id?: string
+          jurisdictions?: string[] | null
+          policy_type: string
+          product_description?: string | null
+          product_name: string
+          status?: string | null
+          third_party_services?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          data_types?: Json | null
+          id?: string
+          jurisdictions?: string[] | null
+          policy_type?: string
+          product_description?: string | null
+          product_name?: string
+          status?: string | null
+          third_party_services?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
