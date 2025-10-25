@@ -1,0 +1,150 @@
+import Navigation from "@/components/Navigation";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Network, Database, Lock, MapPin, CreditCard, Eye } from "lucide-react";
+
+const ComplianceMapping = () => {
+  const dataFlows = [
+    {
+      feature: "User Authentication",
+      icon: Lock,
+      dataTypes: ["Email", "Password Hash"],
+      clauses: ["1.2 Account Information", "3.1 Authentication"],
+      color: "from-primary/20 to-primary/5"
+    },
+    {
+      feature: "Location Services",
+      icon: MapPin,
+      dataTypes: ["GPS Coordinates", "IP Address"],
+      clauses: ["1.4 Location Data", "2.3 Location Processing"],
+      color: "from-secondary/20 to-secondary/5"
+    },
+    {
+      feature: "Payment Processing",
+      icon: CreditCard,
+      dataTypes: ["Card Details", "Billing Address"],
+      clauses: ["1.5 Payment Data", "4.2 PCI Compliance"],
+      color: "from-accent/20 to-accent/5"
+    },
+    {
+      feature: "Usage Analytics",
+      icon: Eye,
+      dataTypes: ["Page Views", "Click Events", "Session Duration"],
+      clauses: ["1.6 Analytics Data", "2.5 Analytics Processing"],
+      color: "from-warning/20 to-warning/5"
+    }
+  ];
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <Navigation />
+      
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Visual Compliance Mapping</h1>
+          <p className="text-muted-foreground">
+            Interactive visualization of data flows and their corresponding legal clauses
+          </p>
+        </div>
+        
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="p-4">
+            <div className="text-2xl font-bold mb-1">24</div>
+            <p className="text-sm text-muted-foreground">Data Flows Mapped</p>
+          </Card>
+          <Card className="p-4">
+            <div className="text-2xl font-bold mb-1">38</div>
+            <p className="text-sm text-muted-foreground">Policy Clauses</p>
+          </Card>
+          <Card className="p-4">
+            <div className="text-2xl font-bold mb-1">100%</div>
+            <p className="text-sm text-muted-foreground">Coverage</p>
+          </Card>
+          <Card className="p-4">
+            <div className="text-2xl font-bold mb-1">5</div>
+            <p className="text-sm text-muted-foreground">Jurisdictions</p>
+          </Card>
+        </div>
+        
+        {/* Visual Flow Map */}
+        <Card className="p-8 mb-8">
+          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <Network className="h-5 w-5 text-primary" />
+            Data Flow Overview
+          </h2>
+          
+          <div className="relative">
+            {/* Central Database Node */}
+            <div className="flex justify-center mb-12">
+              <div className="relative">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+                  <Database className="h-12 w-12 text-primary-foreground" />
+                </div>
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                  <Badge variant="secondary">Core Database</Badge>
+                </div>
+              </div>
+            </div>
+            
+            {/* Feature Nodes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {dataFlows.map((flow, index) => {
+                const Icon = flow.icon;
+                return (
+                  <Card 
+                    key={index}
+                    className={`p-6 bg-gradient-to-br ${flow.color} border-border hover:shadow-lg transition-all duration-300`}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-3 rounded-lg bg-background/50">
+                        <Icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="font-semibold">{flow.feature}</h3>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Data Types</p>
+                        <div className="flex flex-wrap gap-1">
+                          {flow.dataTypes.map((type) => (
+                            <Badge key={type} variant="outline" className="text-xs">
+                              {type}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Linked Clauses</p>
+                        <div className="space-y-1">
+                          {flow.clauses.map((clause) => (
+                            <p key={clause} className="text-xs bg-background/50 rounded px-2 py-1">
+                              {clause}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+        
+        {/* Actions */}
+        <div className="flex gap-4 justify-center">
+          <Button variant="outline">Export Diagram</Button>
+          <Button variant="outline">Generate Report</Button>
+          <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+            Add New Flow
+          </Button>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ComplianceMapping;
