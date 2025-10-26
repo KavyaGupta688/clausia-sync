@@ -26,26 +26,38 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Get authorization header and verify user
+    // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client with service role for database operations
-    const supabaseAdmin = createClient(
+    // Create Supabase client with the user's auth context
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
     );
 
-    // Verify the user's JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    // Verify the user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
-    if (userError || !user) {
-      console.error('Auth error:', userError);
+    if (userError) {
+      console.error('Auth verification error:', userError);
+      throw new Error('Authentication failed');
+    }
+    
+    if (!user) {
+      console.error('No user found in token');
       throw new Error('Unauthorized');
     }
+
+    console.log('User authenticated:', user.id);
 
     console.log('Generating policy for:', productName);
 
@@ -116,7 +128,7 @@ Generate the policy content now:`;
     console.log('Policy generated successfully');
 
     // Save policy to database
-    const { data: policy, error: dbError } = await supabaseAdmin
+    const { data: policy, error: dbError } = await supabaseClient
       .from('policies')
       .insert({
         user_id: user.id,
