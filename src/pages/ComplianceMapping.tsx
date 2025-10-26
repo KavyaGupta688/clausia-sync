@@ -2,10 +2,54 @@ import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Network, Database, Lock, MapPin, CreditCard, Eye } from "lucide-react";
+import { Network, Database, Lock, MapPin, CreditCard, Eye, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const ComplianceMapping = () => {
-  const dataFlows = [
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [mappings, setMappings] = useState<any[]>([]);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+        loadMappings();
+      }
+    });
+  }, [navigate]);
+
+  const loadMappings = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('compliance_mappings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      setMappings(data || []);
+    } catch (error: any) {
+      console.error('Error loading mappings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load compliance mappings",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const defaultDataFlows = [
     {
       feature: "User Authentication",
       icon: Lock,
@@ -35,6 +79,16 @@ const ComplianceMapping = () => {
       color: "from-warning/20 to-warning/5"
     }
   ];
+
+  const dataFlows = mappings.length > 0 
+    ? mappings.map((mapping, idx) => ({
+        feature: mapping.feature_name,
+        icon: [Lock, MapPin, CreditCard, Eye][idx % 4],
+        dataTypes: Array.isArray(mapping.data_types) ? mapping.data_types : [],
+        clauses: Array.isArray(mapping.policy_clauses) ? mapping.policy_clauses : [],
+        color: ["from-primary/20 to-primary/5", "from-secondary/20 to-secondary/5", "from-accent/20 to-accent/5", "from-warning/20 to-warning/5"][idx % 4]
+      }))
+    : defaultDataFlows;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -51,7 +105,7 @@ const ComplianceMapping = () => {
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-4">
-            <div className="text-2xl font-bold mb-1">24</div>
+            <div className="text-2xl font-bold mb-1">{mappings.length || 24}</div>
             <p className="text-sm text-muted-foreground">Data Flows Mapped</p>
           </Card>
           <Card className="p-4">
@@ -75,63 +129,69 @@ const ComplianceMapping = () => {
             Data Flow Overview
           </h2>
           
-          <div className="relative">
-            {/* Central Database Node */}
-            <div className="flex justify-center mb-12">
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
-                  <Database className="h-12 w-12 text-primary-foreground" />
-                </div>
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                  <Badge variant="secondary">Core Database</Badge>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Central Database Node */}
+              <div className="flex justify-center mb-12">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+                    <Database className="h-12 w-12 text-primary-foreground" />
+                  </div>
+                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <Badge variant="secondary">Core Database</Badge>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Feature Nodes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {dataFlows.map((flow, index) => {
-                const Icon = flow.icon;
-                return (
-                  <Card 
-                    key={index}
-                    className={`p-6 bg-gradient-to-br ${flow.color} border-border hover:shadow-lg transition-all duration-300`}
-                  >
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 rounded-lg bg-background/50">
-                        <Icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold">{flow.feature}</h3>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Data Types</p>
-                        <div className="flex flex-wrap gap-1">
-                          {flow.dataTypes.map((type) => (
-                            <Badge key={type} variant="outline" className="text-xs">
-                              {type}
-                            </Badge>
-                          ))}
+              
+              {/* Feature Nodes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {dataFlows.map((flow, index) => {
+                  const Icon = flow.icon;
+                  return (
+                    <Card 
+                      key={index}
+                      className={`p-6 bg-gradient-to-br ${flow.color} border-border hover:shadow-lg transition-all duration-300`}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 rounded-lg bg-background/50">
+                          <Icon className="h-6 w-6 text-primary" />
                         </div>
+                        <h3 className="font-semibold">{flow.feature}</h3>
                       </div>
                       
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Linked Clauses</p>
-                        <div className="space-y-1">
-                          {flow.clauses.map((clause) => (
-                            <p key={clause} className="text-xs bg-background/50 rounded px-2 py-1">
-                              {clause}
-                            </p>
-                          ))}
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Data Types</p>
+                          <div className="flex flex-wrap gap-1">
+                            {flow.dataTypes.map((type, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {type}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Linked Clauses</p>
+                          <div className="space-y-1">
+                            {flow.clauses.map((clause, idx) => (
+                              <p key={idx} className="text-xs bg-background/50 rounded px-2 py-1">
+                                {clause}
+                              </p>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                );
-              })}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </Card>
         
         {/* Actions */}

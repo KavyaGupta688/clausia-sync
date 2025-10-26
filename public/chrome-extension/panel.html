@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clausia Compliance Scanner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+      background: #f8f9fa;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .critical { color: #ef4444; }
+    .high { color: #f59e0b; }
+    .medium { color: #3b82f6; }
+
+    .issues-container {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .issue {
+      padding: 12px;
+      border-left: 3px solid #e5e7eb;
+      margin-bottom: 12px;
+      background: #f9fafb;
+      border-radius: 4px;
+    }
+
+    .issue.critical { border-left-color: #ef4444; }
+    .issue.high { border-left-color: #f59e0b; }
+    .issue.medium { border-left-color: #3b82f6; }
+
+    .issue-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .issue-description {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #9ca3af;
+    }
+
+    .button {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🛡️ Clausia Compliance Scanner</h1>
+    <p class="subtitle">Real-time privacy and compliance monitoring</p>
+  </div>
+
+  <button class="button" onclick="refreshIssues()">🔄 Refresh Issues</button>
+  <button class="button" onclick="clearIssues()" style="margin-left: 8px; background: #ef4444;">🗑️ Clear All</button>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-number critical" id="critical-count">0</div>
+      <div class="stat-label">Critical</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number high" id="high-count">0</div>
+      <div class="stat-label">High</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number medium" id="medium-count">0</div>
+      <div class="stat-label">Medium</div>
+    </div>
+  </div>
+
+  <div class="issues-container">
+    <h2 style="margin-bottom: 16px; font-size: 16px;">Detected Issues</h2>
+    <div id="issues-list">
+      <div class="empty-state">
+        <p>No compliance issues detected yet.</p>
+        <p style="font-size: 12px; margin-top: 8px;">Browse your site and interact with it to start monitoring.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="panel.js"></script>
+</body>
+</html>
