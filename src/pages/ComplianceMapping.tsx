@@ -2,16 +2,38 @@ import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Network, Database, Lock, MapPin, CreditCard, Eye, Loader2 } from "lucide-react";
+import { Network, Database, Lock, MapPin, CreditCard, Eye, Loader2, Plus, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const ComplianceMapping = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [mappings, setMappings] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Form state
+  const [featureName, setFeatureName] = useState("");
+  const [featureDescription, setFeatureDescription] = useState("");
+  const [dataTypes, setDataTypes] = useState<string[]>([]);
+  const [newDataType, setNewDataType] = useState("");
+  const [policyClauses, setPolicyClauses] = useState<string[]>([]);
+  const [newClause, setNewClause] = useState("");
+  
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -46,6 +68,88 @@ const ComplianceMapping = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddDataType = () => {
+    if (newDataType.trim()) {
+      setDataTypes([...dataTypes, newDataType.trim()]);
+      setNewDataType("");
+    }
+  };
+
+  const handleAddClause = () => {
+    if (newClause.trim()) {
+      setPolicyClauses([...policyClauses, newClause.trim()]);
+      setNewClause("");
+    }
+  };
+
+  const handleRemoveDataType = (index: number) => {
+    setDataTypes(dataTypes.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveClause = (index: number) => {
+    setPolicyClauses(policyClauses.filter((_, i) => i !== index));
+  };
+
+  const handleSaveFlow = async () => {
+    if (!featureName.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a feature name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (dataTypes.length === 0) {
+      toast({
+        title: "Missing information",
+        description: "Please add at least one data type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('compliance_mappings')
+        .insert({
+          user_id: user.id,
+          feature_name: featureName,
+          feature_description: featureDescription || null,
+          data_flow: { dataTypes },
+          linked_clauses: policyClauses,
+          compliance_status: 'compliant'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Data flow mapping added successfully",
+      });
+
+      // Reset form
+      setFeatureName("");
+      setFeatureDescription("");
+      setDataTypes([]);
+      setPolicyClauses([]);
+      setDialogOpen(false);
+      
+      // Reload mappings
+      loadMappings();
+    } catch (error: any) {
+      console.error('Error saving mapping:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save data flow mapping",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -209,9 +313,123 @@ const ComplianceMapping = () => {
         <div className="flex gap-4 justify-center">
           <Button variant="outline">Export Diagram</Button>
           <Button variant="outline">Generate Report</Button>
-          <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-            Add New Flow
-          </Button>
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Flow
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add Data Flow Mapping</DialogTitle>
+                <DialogDescription>
+                  Map your application feature to the data it collects and the policy clauses that cover it.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                {/* Feature Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="feature-name">Feature Name *</Label>
+                  <Input
+                    id="feature-name"
+                    placeholder="e.g., User Registration, Payment Checkout"
+                    value={featureName}
+                    onChange={(e) => setFeatureName(e.target.value)}
+                  />
+                </div>
+
+                {/* Feature Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="feature-description">Feature Description</Label>
+                  <Textarea
+                    id="feature-description"
+                    placeholder="Describe what this feature does..."
+                    value={featureDescription}
+                    onChange={(e) => setFeatureDescription(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Data Types */}
+                <div className="space-y-2">
+                  <Label>Data Types Collected *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Email, Password, Credit Card"
+                      value={newDataType}
+                      onChange={(e) => setNewDataType(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddDataType()}
+                    />
+                    <Button type="button" onClick={handleAddDataType}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {dataTypes.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {dataTypes.map((type, index) => (
+                        <Badge key={index} variant="secondary" className="gap-1">
+                          {type}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => handleRemoveDataType(index)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Policy Clauses */}
+                <div className="space-y-2">
+                  <Label>Linked Policy Clauses</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Section 1.2 - Account Information"
+                      value={newClause}
+                      onChange={(e) => setNewClause(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddClause()}
+                    />
+                    <Button type="button" onClick={handleAddClause}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {policyClauses.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {policyClauses.map((clause, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm bg-muted p-2 rounded">
+                          <span className="flex-1">{clause}</span>
+                          <X
+                            className="h-4 w-4 cursor-pointer"
+                            onClick={() => handleRemoveClause(index)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveFlow} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Flow'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
