@@ -18,6 +18,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ComplianceMapping = () => {
   const [loading, setLoading] = useState(true);
@@ -25,6 +32,7 @@ const ComplianceMapping = () => {
   const [mappings, setMappings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [policies, setPolicies] = useState<any[]>([]);
   
   // Form state
   const [featureName, setFeatureName] = useState("");
@@ -32,7 +40,7 @@ const ComplianceMapping = () => {
   const [dataTypes, setDataTypes] = useState<string[]>([]);
   const [newDataType, setNewDataType] = useState("");
   const [policyClauses, setPolicyClauses] = useState<string[]>([]);
-  const [newClause, setNewClause] = useState("");
+  const [selectedPolicy, setSelectedPolicy] = useState<string>("");
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -44,9 +52,25 @@ const ComplianceMapping = () => {
       } else {
         setUser(session.user);
         loadMappings();
+        loadPolicies();
       }
     });
   }, [navigate]);
+
+  const loadPolicies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('policies')
+        .select('id, product_name, policy_type')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPolicies(data || []);
+    } catch (error: any) {
+      console.error('Error loading policies:', error);
+    }
+  };
 
   const loadMappings = async () => {
     setLoading(true);
@@ -78,10 +102,32 @@ const ComplianceMapping = () => {
     }
   };
 
-  const handleAddClause = () => {
-    if (newClause.trim()) {
-      setPolicyClauses([...policyClauses, newClause.trim()]);
-      setNewClause("");
+  const suggestedClauses = [
+    "1.1 Information We Collect",
+    "1.2 Account Information",
+    "1.3 Usage Data",
+    "1.4 Location Data",
+    "1.5 Payment Data",
+    "1.6 Analytics Data",
+    "2.1 Service Provision",
+    "2.2 Communication",
+    "2.3 Location Processing",
+    "2.4 Marketing",
+    "2.5 Analytics Processing",
+    "3.1 Authentication",
+    "3.2 Account Management",
+    "3.3 Transaction Processing",
+    "4.1 Security Measures",
+    "4.2 PCI Compliance",
+    "4.3 Data Encryption",
+    "5.1 Data Retention",
+    "5.2 User Rights",
+    "5.3 Data Deletion"
+  ];
+
+  const handleAddClause = (clause: string) => {
+    if (clause && !policyClauses.includes(clause)) {
+      setPolicyClauses([...policyClauses, clause]);
     }
   };
 
@@ -384,18 +430,22 @@ const ComplianceMapping = () => {
 
                 {/* Policy Clauses */}
                 <div className="space-y-2">
-                  <Label>Linked Policy Clauses</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g., Section 1.2 - Account Information"
-                      value={newClause}
-                      onChange={(e) => setNewClause(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddClause()}
-                    />
-                    <Button type="button" onClick={handleAddClause}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Label>Link to Policy Clauses (Select from Common Clauses)</Label>
+                  <Select onValueChange={handleAddClause} value="">
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select a policy clause to add..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {suggestedClauses.map((clause) => (
+                        <SelectItem key={clause} value={clause}>
+                          {clause}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select which sections of your privacy policy cover this data collection
+                  </p>
                   {policyClauses.length > 0 && (
                     <div className="space-y-2 mt-2">
                       {policyClauses.map((clause, index) => (
