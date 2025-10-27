@@ -81,13 +81,24 @@ const ComplianceMapping = () => {
   ];
 
   const dataFlows = mappings.length > 0 
-    ? mappings.map((mapping, idx) => ({
-        feature: mapping.feature_name,
-        icon: [Lock, MapPin, CreditCard, Eye][idx % 4],
-        dataTypes: Array.isArray(mapping.data_types) ? mapping.data_types : [],
-        clauses: Array.isArray(mapping.policy_clauses) ? mapping.policy_clauses : [],
-        color: ["from-primary/20 to-primary/5", "from-secondary/20 to-secondary/5", "from-accent/20 to-accent/5", "from-warning/20 to-warning/5"][idx % 4]
-      }))
+    ? mappings.map((mapping, idx) => {
+        // Parse data_flow JSON which contains data types
+        const dataFlow = mapping.data_flow || {};
+        const dataTypes = dataFlow.dataTypes || dataFlow.data_types || [];
+        
+        // Parse linked_clauses which is a JSON array
+        const linkedClauses = Array.isArray(mapping.linked_clauses) 
+          ? mapping.linked_clauses 
+          : (mapping.linked_clauses ? [mapping.linked_clauses] : []);
+        
+        return {
+          feature: mapping.feature_name,
+          icon: [Lock, MapPin, CreditCard, Eye][idx % 4],
+          dataTypes: Array.isArray(dataTypes) ? dataTypes : [],
+          clauses: linkedClauses,
+          color: ["from-primary/20 to-primary/5", "from-secondary/20 to-secondary/5", "from-accent/20 to-accent/5", "from-warning/20 to-warning/5"][idx % 4]
+        };
+      })
     : defaultDataFlows;
   
   return (
