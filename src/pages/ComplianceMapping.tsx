@@ -2,8 +2,8 @@ import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Network, Database, Lock, MapPin, CreditCard, Eye, Loader2, Plus, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Network, Database, Lock, MapPin, CreditCard, Eye, Loader2, Plus, X, Download, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const ComplianceMapping = () => {
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,9 @@ const ComplianceMapping = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [policies, setPolicies] = useState<any[]>([]);
+  const [exporting, setExporting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const diagramRef = useRef<HTMLDivElement>(null);
   
   // Form state
   const [featureName, setFeatureName] = useState("");
@@ -199,6 +204,121 @@ const ComplianceMapping = () => {
     }
   };
 
+  const handleExportDiagram = async () => {
+    if (!diagramRef.current) return;
+    
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(diagramRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+      });
+      
+      const link = document.createElement('a');
+      link.download = `compliance-mapping-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      toast({
+        title: "Success!",
+        description: "Diagram exported successfully",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export diagram",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setGenerating(true);
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPosition = 20;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.text('Compliance Mapping Report', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Date
+      pdf.setFontSize(10);
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Summary Statistics
+      pdf.setFontSize(14);
+      pdf.text('Summary', 20, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(10);
+      pdf.text(`Total Data Flows: ${mappings.length}`, 20, yPosition);
+      yPosition += 7;
+      
+      const totalClauses = mappings.reduce((acc, m) => acc + (Array.isArray(m.linked_clauses) ? m.linked_clauses.length : 0), 0);
+      pdf.text(`Total Policy Clauses Linked: ${totalClauses}`, 20, yPosition);
+      yPosition += 15;
+
+      // Data Flow Details
+      pdf.setFontSize(14);
+      pdf.text('Data Flow Mappings', 20, yPosition);
+      yPosition += 10;
+
+      dataFlows.forEach((flow, index) => {
+        // Check if we need a new page
+        if (yPosition > 250) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
+        pdf.setFontSize(12);
+        pdf.text(`${index + 1}. ${flow.feature}`, 20, yPosition);
+        yPosition += 7;
+
+        pdf.setFontSize(10);
+        pdf.text(`Data Types: ${flow.dataTypes.join(', ')}`, 25, yPosition);
+        yPosition += 7;
+
+        if (flow.clauses.length > 0) {
+          pdf.text('Policy Clauses:', 25, yPosition);
+          yPosition += 5;
+          flow.clauses.forEach((clause) => {
+            if (yPosition > 270) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+            pdf.text(`  - ${clause}`, 30, yPosition);
+            yPosition += 5;
+          });
+        }
+        yPosition += 5;
+      });
+
+      // Save PDF
+      pdf.save(`compliance-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "Success!",
+        description: "Compliance report generated successfully",
+      });
+    } catch (error) {
+      console.error('Report generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const defaultDataFlows = [
     {
       feature: "User Authentication",
@@ -295,7 +415,7 @@ const ComplianceMapping = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="relative">
+            <div className="relative" ref={diagramRef}>
               {/* Central Database Node */}
               <div className="flex justify-center mb-12">
                 <div className="relative">
@@ -357,8 +477,40 @@ const ComplianceMapping = () => {
         
         {/* Actions */}
         <div className="flex gap-4 justify-center">
-          <Button variant="outline">Export Diagram</Button>
-          <Button variant="outline">Generate Report</Button>
+          <Button 
+            variant="outline" 
+            onClick={handleExportDiagram}
+            disabled={exporting || loading}
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export Diagram
+              </>
+            )}
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={handleGenerateReport}
+            disabled={generating || loading}
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Report
+              </>
+            )}
+          </Button>
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
