@@ -23,21 +23,29 @@ serve(async (req) => {
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client
+    // Create Supabase client with correct key
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
     // Get user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    if (userError) {
+      console.error('User authentication error:', userError);
+      throw new Error(`Authentication failed: ${userError.message}`);
     }
+    if (!user) {
+      console.error('No user found in session');
+      throw new Error('Unauthorized - no user session');
+    }
+    
+    console.log('User authenticated:', user.id);
 
     console.log('Running compliance scan:', scanType);
 

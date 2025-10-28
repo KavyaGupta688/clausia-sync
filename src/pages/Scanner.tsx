@@ -36,7 +36,7 @@ const Scanner = () => {
       const { data, error } = await supabase
         .from('compliance_scans')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('scanned_at', { ascending: false })
         .limit(1);
 
       if (error) throw error;
