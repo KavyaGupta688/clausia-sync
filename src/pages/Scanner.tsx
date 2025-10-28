@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, AlertTriangle, CheckCircle2, Chrome, Play, Loader2, Code } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle2, Chrome, Play, Loader2, Code, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import JSZip from "jszip";
 
 const Scanner = () => {
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,68 @@ const Scanner = () => {
       }
     } catch (error: any) {
       console.error('Error loading scans:', error);
+    }
+  };
+
+  const downloadExtension = async () => {
+    setLoading(true);
+    try {
+      const zip = new JSZip();
+      
+      // List of all extension files
+      const extensionFiles = [
+        'manifest.json',
+        'background.js',
+        'devtools.html',
+        'devtools.js',
+        'panel.html',
+        'panel.js',
+        'popup.html',
+        'icon16.png',
+        'icon48.png',
+        'icon128.png',
+        'README.md'
+      ];
+
+      // Fetch and add each file to the zip
+      for (const file of extensionFiles) {
+        try {
+          const response = await fetch(`/chrome-extension/${file}`);
+          if (response.ok) {
+            const blob = await response.blob();
+            zip.file(file, blob);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch ${file}:`, error);
+        }
+      }
+
+      // Generate the zip file
+      const content = await zip.generateAsync({ type: 'blob' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'clausia-extension.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete!",
+        description: "Extract the ZIP and follow the installation steps below",
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download extension",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,25 +286,31 @@ const Scanner = () => {
               <div className="bg-background/50 rounded-lg p-4 text-sm mb-4">
                 <p className="font-semibold mb-2">Installation Steps:</p>
                 <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Download the extension ZIP file using the button below</li>
+                  <li>Extract the ZIP file to a folder on your computer</li>
                   <li>Open Chrome and go to <code className="bg-muted px-1 rounded">chrome://extensions/</code></li>
                   <li>Enable "Developer mode" (toggle in top right)</li>
                   <li>Click "Load unpacked"</li>
-                  <li>Navigate to your project folder and select <code className="bg-muted px-1 rounded">public/chrome-extension</code></li>
+                  <li>Select the extracted folder</li>
                   <li>Open DevTools (F12) and look for the "Clausia" tab</li>
                 </ol>
               </div>
               <Button 
-                variant="outline" 
-                className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
-                onClick={() => {
-                  toast({
-                    title: "Extension Location",
-                    description: "The extension files are in public/chrome-extension folder of your project",
-                  });
-                }}
+                className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+                onClick={downloadExtension}
+                disabled={loading}
               >
-                <Chrome className="h-4 w-4 mr-2" />
-                View Installation Guide
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Preparing Download...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Chrome Extension
+                  </>
+                )}
               </Button>
             </div>
           </div>
