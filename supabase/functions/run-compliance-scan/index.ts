@@ -97,7 +97,7 @@ Detect if:
 
 Provide recommendations for policy updates.`;
     } else if (scanType === 'live_scan') {
-      userPrompt = `Perform live compliance scan:
+      userPrompt = `Perform live compliance scan${codeContext ? ' for: ' + codeContext : ''}:
 
 Check for:
 1. Active cookie consent banners
@@ -106,8 +106,22 @@ Check for:
 4. GDPR compliance indicators
 5. User rights implementation
 6. Data retention policies
+7. Cookie security (HttpOnly, Secure, SameSite attributes)
+8. Third-party tracking scripts
+9. Data encryption practices
 
-Identify compliance gaps and provide actionable recommendations.`;
+Provide findings in JSON format:
+{
+  "findings": [
+    {
+      "title": "Issue title",
+      "severity": "critical|high|medium|low",
+      "description": "Detailed description",
+      "location": "location or component",
+      "recommendation": "How to fix"
+    }
+  ]
+}`;
     }
 
     // Call AI for analysis

@@ -220,12 +220,29 @@ const Scanner = () => {
                 Install our Chrome extension to detect compliance issues in real-time during development. 
                 Monitor cookies, API calls, and data collection as you build.
               </p>
-              <a href="/chrome-extension/clausia-extension.zip" download>
-                <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Download Extension
-                </Button>
-              </a>
+              <div className="bg-background/50 rounded-lg p-4 text-sm mb-4">
+                <p className="font-semibold mb-2">Installation Steps:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Open Chrome and go to <code className="bg-muted px-1 rounded">chrome://extensions/</code></li>
+                  <li>Enable "Developer mode" (toggle in top right)</li>
+                  <li>Click "Load unpacked"</li>
+                  <li>Navigate to your project folder and select <code className="bg-muted px-1 rounded">public/chrome-extension</code></li>
+                  <li>Open DevTools (F12) and look for the "Clausia" tab</li>
+                </ol>
+              </div>
+              <Button 
+                variant="outline" 
+                className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  toast({
+                    title: "Extension Location",
+                    description: "The extension files are in public/chrome-extension folder of your project",
+                  });
+                }}
+              >
+                <Chrome className="h-4 w-4 mr-2" />
+                View Installation Guide
+              </Button>
             </div>
           </div>
         </Card>
