@@ -30,14 +30,14 @@ serve(async (req) => {
     // Extract the JWT token from "Bearer <token>"
     const token = authHeader.replace('Bearer ', '');
 
-    // Create Supabase client for admin operations
-    const supabaseClient = createClient(
+    // Create Supabase client for user authentication (uses anon key)
+    const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     // Verify the JWT token and get user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
     if (userError) {
       console.error('User authentication error:', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
@@ -48,6 +48,12 @@ serve(async (req) => {
     }
     
     console.log('User authenticated:', user.id);
+
+    // Create Supabase client with service role key for database operations (bypasses RLS)
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     console.log('Running compliance scan:', scanType);
 
