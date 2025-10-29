@@ -213,9 +213,15 @@ Provide findings in JSON format:
 
   } catch (error) {
     console.error('Error in run-compliance-scan function:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : undefined
       }),
       { 
         status: 500,

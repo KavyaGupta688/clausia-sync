@@ -142,6 +142,9 @@ const Scanner = () => {
     setLoading(true);
     
     try {
+      console.log('Starting scan with type:', scanType);
+      console.log('Code context:', codeInput.substring(0, 100));
+      
       const { data, error } = await supabase.functions.invoke('run-compliance-scan', {
         body: {
           scanType,
@@ -149,7 +152,17 @@ const Scanner = () => {
         },
       });
 
-      if (error) throw error;
+      console.log('Scan response:', { data, error });
+
+      if (error) {
+        console.error('Function invocation error:', error);
+        throw new Error(error.message || 'Failed to invoke function');
+      }
+
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
 
       setScanResults(data.findings || []);
       setSeveritySummary(data.severitySummary || { critical: 0, high: 0, medium: 0, low: 0 });
@@ -161,10 +174,10 @@ const Scanner = () => {
 
       await loadRecentScans();
     } catch (error: any) {
-      console.error('Scan error:', error);
+      console.error('Scan error details:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to run scan",
+        title: "Scan Failed",
+        description: error.message || "An unexpected error occurred. Please check console for details.",
         variant: "destructive",
       });
     } finally {
