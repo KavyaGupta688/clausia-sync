@@ -26,14 +26,33 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Get authorization header
+    // Get authorization header and extract user from JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client with the user's auth context
+    // Extract JWT token
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Decode JWT to get user info (JWT is already verified by Supabase when verify_jwt = true)
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      throw new Error('Invalid token format');
+    }
+    
+    const payload = JSON.parse(atob(tokenParts[1]));
+    const userId = payload.sub;
+    
+    if (!userId) {
+      console.error('No user ID found in token');
+      throw new Error('Unauthorized');
+    }
+
+    console.log('User authenticated:', userId);
+
+    // Create Supabase client for database operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -43,21 +62,6 @@ serve(async (req) => {
         } 
       }
     );
-
-    // Verify the user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    
-    if (userError) {
-      console.error('Auth verification error:', userError);
-      throw new Error('Authentication failed');
-    }
-    
-    if (!user) {
-      console.error('No user found in token');
-      throw new Error('Unauthorized');
-    }
-
-    console.log('User authenticated:', user.id);
 
     console.log('Generating policy for:', productName);
 
@@ -131,7 +135,7 @@ Generate the policy content now:`;
     const { data: policy, error: dbError } = await supabaseClient
       .from('policies')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         product_name: productName,
         product_description: productDescription,
         policy_type: 'privacy_policy',
