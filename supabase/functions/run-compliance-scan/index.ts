@@ -20,22 +20,24 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Get authorization header
+    // Get authorization header and extract JWT token
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client with correct key
+    // Extract the JWT token from "Bearer <token>"
+    const token = authHeader.replace('Bearer ', '');
+
+    // Create Supabase client for admin operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    // Get user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Verify the JWT token and get user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) {
       console.error('User authentication error:', userError);
       throw new Error(`Authentication failed: ${userError.message}`);
