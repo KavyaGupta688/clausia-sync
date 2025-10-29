@@ -34,9 +34,6 @@ const Hero = () => {
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline">
-              Watch Demo
-            </Button>
           </div>
           
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
